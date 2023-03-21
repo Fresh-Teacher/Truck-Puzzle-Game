@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en-EN">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Language" content="en" />
+<meta name="LANGUAGE" content="en" />
+<title>Free Maze Game for Children 3 - 6: Truck</title>
+
+<link href="../css-responsive/indiv.css" rel="stylesheet" type="text/css">
+
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+<!-- write your code here -->
+<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
+<script src="js/13-laberinto-camion.js"></script>
+<script>
+// Global Scripts
+	function Player(clip , wall , door , onEndLevel , obstacles) 
+{
+	this.wall = wall;
+	this.door = door;
+	this.clip = clip;
+	this.clip.visible = true;
+	this.obstacles = obstacles;
+	this.isFirstLoad = true;
+	this.originX = this.clip.x;
+	this.originY = this.clip.y;
+	window.addEventListener("keydown" , this.onKeyDown.bind(this));
+	window.addEventListener("keyup" , this.onKeyUp.bind(this));
+	this.keypress = [];
+	this.speed = 5.5;
+	this.radius = 10;
+	this.onEndLevel = onEndLevel;
+	// preguntar si existe jostick virtual
+	var canvas = this.clip.parent;
+	this.virtual = {up : false , down : false , left : false , right : false};
+	if (canvas["btn_up"]) 
+	{
+		canvas.btn_up.removeAllEventListeners();
+		canvas.btn_up.on("mousedown" , this.onButtonDown.bind(this));
+		canvas.btn_up.on("pressup" , this.onButtonUp.bind(this));
+		canvas.btn_up.visible = true;
+	}
+	if (canvas["btn_down"]) 
+	{
+		canvas.btn_down.removeAllEventListeners();
+		canvas.btn_down.on("mousedown" , this.onButtonDown.bind(this));
+		canvas.btn_down.on("pressup" , this.onButtonUp.bind(this));
+		canvas.btn_down.visible = true;
+	}
+	if (canvas["btn_left"]) 
+	{
+		canvas.btn_left.removeAllEventListeners();
+		canvas.btn_left.on("mousedown" , this.onButtonDown.bind(this));
+		canvas.btn_left.on("pressup" , this.onButtonUp.bind(this));
+		canvas.btn_left.visible = true;
+	}
+	if (canvas["btn_right"]) 
+	{
+		canvas.btn_right.removeAllEventListeners();
+		canvas.btn_right.on("mousedown" , this.onButtonDown.bind(this));
+		canvas.btn_right.on("pressup" , this.onButtonUp.bind(this));
+		canvas.btn_right.visible = true;
+	}
+}
+Player.prototype.onButtonDown = function(e) {
+	var item = e.currentTarget.name;
+	this.virtual[item.split("_")[1]] = true;
+}
+Player.prototype.onButtonUp = function(e) {
+	var item = e.currentTarget.name;
+	delete this.virtual[item.split("_")[1]];
+}
+/*
+Player.prototype.onKeyDown = function(e) {
+	this.keypress[e.keyCode] = true;
+}
+*/
+Player.prototype.onKeyDown = function(e) {
+	this.keypress[e.keyCode] = true;
+	switch(e.keyCode){
+            case 37: case 39: case 38:  case 40: // Arrow keys
+            case 32: e.preventDefault(); break; // Space
+            default: break; // do not block other keys
+	}
+}
+Player.prototype.onKeyUp = function(e) {
+	delete this.keypress[e.keyCode];
+}
+Player.prototype.update = function(e)
+{
+	if (this.isFirstLoad) 
+	{
+		this.originX = this.clip.x;
+		this.originY = this.clip.y;
+		this.isFirstLoad = false;
+		console.log(this.originX);
+		console.log(this.originY);
+	}
+	var vx = 0, vy = 0;
+	if (this.keypress[87] || this.keypress[38] || this.virtual.up) // 87 => W 
+	{
+		vy = -this.speed;
+		this.clip.gotoAndStop(2);
+	}
+	if (this.keypress[83] || this.keypress[40] || this.virtual.down) // 83 => S
+	{
+		vy = this.speed;
+		this.clip.gotoAndStop(3);
+	}
+	if (this.keypress[65] || this.keypress[37] || this.virtual.left) // 65 => A
+	{
+		vx = -this.speed;
+		this.clip.gotoAndStop(1);
+	}
+	if (this.keypress[68] || this.keypress[39] || this.virtual.right) // 65 => D
+	{
+		vx = this.speed;
+		this.clip.gotoAndStop(0);
+	}
+	this.clip.x += vx;
+	this.clip.y += vy;
+   var pt = this.clip.localToLocal(0 , 0, this.wall);
+   while(this.wall.hitTest(pt.x, pt.y + this.radius))
+   {
+	  this.clip.y = this.clip.y - 1;
+	  pt.y -= 1;
+   }
+   while(this.wall.hitTest(pt.x,pt.y - this.radius))
+   {
+	  this.clip.y = this.clip.y + 1;
+	  pt.y += 1;
+   }
+   while(this.wall.hitTest(pt.x - this.radius,pt.y))
+   {
+	  this.clip.x = this.clip.x + 1;
+	   pt.x += 1;
+   }
+   while(this.wall.hitTest(pt.x + this.radius,pt.y))
+   {
+	  this.clip.x = this.clip.x - 1;
+	   pt.x -= 1;
+   }
+   // check collision with obstacles
+   for (var k = 0; k < this.obstacles.length; k++) 
+   {
+	   var pto = this.clip.localToLocal(0 , 0 , this.obstacles[k]);
+	   if (this.obstacles[k].hitTest(pto.x , pto.y)) 
+	   {
+		 playSound("toing");
+		   this.clip.x = this.originX;
+		  this.clip.y = this.originY;
+		  break;
+	   }
+   }
+   var pt2 = this.clip.localToLocal(0 , 0 , this.door);
+   // check collision with door
+   if (this.door.hitTest(pt2.x, pt2.y))
+   {
+	   this.onEndLevel();
+   }
+}
+Player.prototype.clear = function()
+{
+	window.removeEventListener("keydown" , this.onKeyDown);
+	window.removeEventListener("keyup" , this.onKeyUp);
+}</script>
+<script>
+var canvas, stage, exportRoot, anim_container, dom_overlay_container, fnStartAnimation;
+function init() {
+	canvas = document.getElementById("canvas");
+	anim_container = document.getElementById("animation_container");
+	dom_overlay_container = document.getElementById("dom_overlay_container");
+	var comp=AdobeAn.getComposition("961C296F70897F4AAEF666856D75D3AA");
+	var lib=comp.getLibrary();
+	var loader = new createjs.LoadQueue(false);
+	loader.installPlugin(createjs.Sound);
+	loader.addEventListener("complete", function(evt){handleComplete(evt,comp)});
+	var lib=comp.getLibrary();
+	loader.loadManifest(lib.properties.manifest);
+}
+function handleComplete(evt,comp) {
+	//This function is always called, irrespective of the content. You can use the variable "stage" after it is created in token create_stage.
+	var lib=comp.getLibrary();
+	var ss=comp.getSpriteSheet();
+	var queue = evt.target;
+	var ssMetadata = lib.ssMetadata;
+	for(i=0; i<ssMetadata.length; i++) {
+		ss[ssMetadata[i].name] = new createjs.SpriteSheet( {"images": [queue.getResult(ssMetadata[i].name)], "frames": ssMetadata[i].frames} )
+	}
+	var preloaderDiv = document.getElementById("_preload_div_");
+	preloaderDiv.style.display = 'none';
+	canvas.style.display = 'block';
+	exportRoot = new lib._13laberintocamion();
+	stage = new lib.Stage(canvas);
+	stage.enableMouseOver();	
+	//Registers the "tick" event listener.
+	fnStartAnimation = function() {
+		stage.addChild(exportRoot);
+		createjs.Ticker.framerate = lib.properties.fps;
+		createjs.Ticker.addEventListener("tick", stage);
+	}	    
+	//Code to support hidpi screens and responsive scaling.
+	AdobeAn.makeResponsive(true,'both',false,1,[canvas,preloaderDiv,anim_container,dom_overlay_container]);	
+	AdobeAn.compositionLoaded(lib.properties.id);
+	fnStartAnimation();
+}
+function playSound(id, loop, offset) {
+	return createjs.Sound.play(id, {'interrupt':createjs.Sound.INTERRUPT_EARLY, 'loop': loop, 'offset': offset});}
+</script>
+<!-- write your code here -->
+
+</head>
+<body onload="init();" style="margin:0px;">
+<div class="container-indiv">
+<div class="juego-main">
+<div class="juego">
+
+   	<div id="animation_container" style="background-color:rgba(255, 255, 255, 1.00); width:730px; height:367px">
+		<canvas id="canvas" width="730" height="367" style="position: absolute; display: none; background-color:rgba(255, 255, 255, 1.00);"></canvas>
+		<div id="dom_overlay_container" style="pointer-events:none; overflow:hidden; width:730px; height:367px; position: absolute; left: 0px; top: 0px; display: none;">
+		</div>
+	</div>
+   
+   
+    <div id='_preload_div_' style='position:absolute; top:0; left:120; display: inline-block; height:367px; width:730px; text-align: left;'>	<span style='display: inline-block; height: 100%; vertical-align: top;'></span>	<img src=images/_preloader.gif alt="preloader" style='vertical-align: left; max-height: 100%'/></div>
+         	<div class="clearfloat"></div>
+
+   
+</body>
+</html>
